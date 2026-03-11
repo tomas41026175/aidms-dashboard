@@ -5,6 +5,21 @@
 
 ---
 
+## 技術標籤（Tags）
+
+每份 spec header 必須包含 `Tags` 欄位，列出此 Task 直接涉及的技術 / 套件 / 概念：
+
+```markdown
+**Tags**: `React` `TypeScript` `@mui/x-charts` `SSE` `FastAPI` `Vitest`
+```
+
+規則：
+- 只列**此 Task 實際用到**的技術，不列整個專案的 stack
+- 格式：反引號包住每個 tag，空格分隔
+- 目的：快速掃描 spec 時判斷涉及範圍，面試中定位技術對話切入點
+
+---
+
 ## 必要區塊
 
 ### 1. 亮點與 WHY（Highlights）
@@ -111,6 +126,7 @@ Task Plan 的每個 task 必須細化到「可直接執行」的顆粒度：
 **Started**: {ISO timestamp}
 **Phase**: planning
 **Mode**: simple
+**Tags**: `{技術1}` `{技術2}` `{技術3}`
 
 ---
 
