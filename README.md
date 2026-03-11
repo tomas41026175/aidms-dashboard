@@ -1,6 +1,6 @@
 # AIDMS Dashboard — Workspace
 
-麗臺科技前端工程師面試實作題的雙層開發 Workspace。
+雙層開發 Workspace。
 
 ## 架構說明
 
