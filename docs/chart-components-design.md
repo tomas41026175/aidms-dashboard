@@ -420,7 +420,58 @@ import { getStatusColor } from '@/utils/alert-colors';
 
 ---
 
-## 10. Memoization 策略
+## 10. 大量資料優化策略
+
+> 完整方案見 [`docs/chart-large-data-optimization.md`](./chart-large-data-optimization.md)
+
+### 核心原則
+
+| 資料量 | 策略 |
+|--------|------|
+| < 300 點 | 直接 SVG 渲染（MUI 預設） |
+| 300 ~ 10k 點 | LTTB 降採樣 → 壓縮到 < 300 點 |
+| > 10k 點 | Canvas 渲染 + Web Worker 降採樣 |
+
+### `LineChartProps` 新增欄位（MVP 可選）
+
+```typescript
+interface LineChartProps extends ChartBaseProps {
+  maxPoints?: number;                              // 預設 300，超過自動 LTTB 降採樣
+  downsampleStrategy?: 'lttb' | 'minmax' | 'none'; // 預設 'lttb'
+  enableCanvasFallback?: boolean;                  // 預設 true，> 10k 自動切 Canvas
+}
+```
+
+### Transform Layer 整合
+
+```typescript
+// transforms/to-line-props.ts（降採樣整合點）
+export function toLineChartProps(props: LineChartProps) {
+  const { labels, datasets, maxPoints = 300, downsampleStrategy = 'lttb' } = props;
+
+  // 超過 maxPoints 時自動降採樣（純函式，可測試）
+  const { labels: sampledLabels, datasets: sampledDatasets } =
+    labels.length > maxPoints && downsampleStrategy !== 'none'
+      ? downsampleDatasets(labels as number[], datasets, maxPoints, downsampleStrategy)
+      : { labels, datasets };
+
+  // 以下邏輯不變...
+}
+```
+
+### 無障礙（a11y）最低標準（MVP）
+
+```typescript
+// 每個圖表元件必須有：
+role="img"  // LineChart / BarChart
+role="meter" // GaugeChart
+aria-label={title ?? `${chartType}圖表`}
+aria-describedby={descId}  // 指向隱藏的文字描述
+```
+
+---
+
+## 11. Memoization 策略
 
 **元件庫內部：** `useMemo` 包住 transform 呼叫，避免每次 re-render 都重新計算。
 

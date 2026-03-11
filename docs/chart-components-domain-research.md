@@ -1006,6 +1006,50 @@ cd DemoApp && pnpm dev
 
 ---
 
+## 6. 大量資料優化快速索引
+
+> 完整方案見 [`docs/chart-large-data-optimization.md`](./chart-large-data-optimization.md)
+
+### 各圖表閾值一覽
+
+| 圖表 | 正常承受量 | 降採樣觸發 | Canvas 切換 |
+|------|-----------|-----------|------------|
+| LineChart | 150 點（SSE sliding window） | > 300 點（LTTB） | > 10k 點 |
+| BarChart | < 50 bars | 50~200（水平捲動） | > 200（虛擬化） |
+| GaugeChart | 單值，無上限 | — | — |
+
+### SSE 場景（本專案 MVP）
+
+```
+MAX_POINTS = 150，2s interval = 5min 歷史
+→ 完全不需要降採樣，直接 SVG 渲染
+```
+
+### 歷史回顧場景（[MVP-CUT]，未來擴充）
+
+```
+24h @ 2s = 43,200 點  → LTTB 降採樣到 300 點
+7d @ 2s  = 302,400 點 → Canvas + Worker 降採樣
+```
+
+### LTTB vs Min-Max 選擇
+
+```
+視覺保真  → LTTB（預設）
+告警峰值  → minmax（保留突刺）
+```
+
+### a11y 快速檢查清單
+
+```
+☐ LineChart/BarChart: role="img" + aria-label
+☐ GaugeChart: role="meter" + aria-valuenow/min/max
+☐ 色彩對比度 ≥ 4.5:1（WCAG AA）
+☐ DataTableFallback skip link（僅 focus 時顯示）
+```
+
+---
+
 ## 附錄：快速參考卡
 
 ### series 長度一致性防護（必裝）
