@@ -37,3 +37,9 @@ coverage/
 # Temp
 *.tmp
 .cache/
+
+# Inner repos（各自獨立 git repo，由 setup.sh 管理）
+# https://github.com/tomas41026175/aidms-chart-components
+# https://github.com/tomas41026175/aidms-dashboard-app
+ChartComponents/
+DashboardApp/

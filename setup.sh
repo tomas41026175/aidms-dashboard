@@ -2,28 +2,41 @@
 # =============================================================================
 # setup.sh — AIDMS Dashboard Workspace Setup
 #
-# 雙層架構設定腳本
-#   Layer 1 (Workspace): aidms-dashboard/  ← 你現在在這裡
-#   Layer 2a (Package):  ChartComponents/  ← @aidms/chart-components
-#   Layer 2b (App):      DashboardApp/     ← React + FastAPI
+# 三層 Git 架構設定腳本
+#   Layer 1 (Workspace):     aidms-dashboard/          ← 你現在在這裡
+#   Layer 2a (Package):      ChartComponents/          ← @aidms/chart-components
+#   Layer 2b (App):          DashboardApp/             ← React + FastAPI
 #
 # 使用方式:
-#   bash setup.sh           # 安裝依賴
-#   bash setup.sh --dev     # 安裝依賴 + 啟動開發環境
+#   bash setup.sh              # clone/pull inner repos + 安裝依賴
+#   bash setup.sh --install    # 同上（明確指定安裝）
+#   bash setup.sh --dev        # 安裝依賴 + 啟動開發環境
 # =============================================================================
 
 set -euo pipefail
 
+CHART_REPO="${AIDMS_CHART_REPO:-https://github.com/tomas41026175/aidms-chart-components.git}"
+APP_REPO="${AIDMS_APP_REPO:-https://github.com/tomas41026175/aidms-dashboard-app.git}"
+CHART_DIR="ChartComponents"
+APP_DIR="DashboardApp"
 DEV_MODE=false
+INSTALL_DEPS=true
 
 for arg in "$@"; do
   case $arg in
-    --dev) DEV_MODE=true ;;
+    --dev)     DEV_MODE=true ;;
+    --install) INSTALL_DEPS=true ;;
+    --no-install) INSTALL_DEPS=false ;;
     --help|-h)
-      echo "用法: bash setup.sh [--dev]"
+      echo "用法: bash setup.sh [選項]"
       echo ""
-      echo "  (無參數)  安裝所有依賴"
-      echo "  --dev     安裝依賴並啟動前端 + 後端開發環境"
+      echo "  (無參數)     clone/pull inner repos + 安裝依賴"
+      echo "  --dev        安裝依賴並啟動前端 + 後端開發環境"
+      echo "  --no-install 只 clone/pull，不安裝依賴"
+      echo ""
+      echo "環境變數:"
+      echo "  AIDMS_CHART_REPO   @aidms/chart-components repo URL"
+      echo "  AIDMS_APP_REPO     Dashboard App repo URL"
       exit 0
       ;;
   esac
@@ -40,15 +53,11 @@ log_success() { echo -e "${GREEN}[OK]${NC}    $*"; }
 log_warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 log_error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
 
-# 檢測 Python 指令（Mac: python3, Windows: python）
+# 檢測 Python 指令
 detect_python() {
-  if command -v python3 &>/dev/null; then
-    echo "python3"
-  elif command -v python &>/dev/null; then
-    echo "python"
-  else
-    log_error "找不到 Python，請先安裝 Python 3.11+"
-    exit 1
+  if command -v python3 &>/dev/null; then echo "python3"
+  elif command -v python &>/dev/null; then echo "python"
+  else log_error "找不到 Python，請先安裝 Python 3.11+"; exit 1
   fi
 }
 
@@ -58,107 +67,136 @@ PYTHON_CMD=$(detect_python)
 echo ""
 echo "============================================================"
 echo "  AIDMS Dashboard Workspace Setup"
-echo "  Python: ${PYTHON_CMD}"
+echo "  Workspace:  ${WORKSPACE_DIR}"
+echo "  Python:     ${PYTHON_CMD}"
 echo "============================================================"
 echo ""
 
-# ── ChartComponents ────────────────────────────────────────────────────────
-if [[ -f "ChartComponents/package.json" ]]; then
-  log_info "安裝 ChartComponents 依賴..."
-  cd ChartComponents && npm install && cd "$WORKSPACE_DIR"
-  log_success "ChartComponents 依賴安裝完成"
-else
-  log_warn "ChartComponents/package.json 不存在，跳過"
-fi
+# ── clone / pull inner repos ──────────────────────────────────────────────
 
-# ── DashboardApp Frontend ──────────────────────────────────────────────────
-if [[ -f "DashboardApp/frontend/package.json" ]]; then
-  log_info "安裝 DashboardApp frontend 依賴..."
-  cd DashboardApp/frontend && npm install && cd "$WORKSPACE_DIR"
-  log_success "Frontend 依賴安裝完成"
-else
-  log_warn "DashboardApp/frontend/package.json 不存在，跳過"
-fi
+clone_or_pull() {
+  local dir="$1" repo="$2" name="$3"
 
-# ── DashboardApp Backend ───────────────────────────────────────────────────
-if [[ -f "DashboardApp/backend/requirements.txt" ]]; then
-  log_info "建立 Python 虛擬環境並安裝依賴..."
-  cd DashboardApp/backend
+  if [[ -d "${dir}/.git" ]]; then
+    log_info "更新 ${name}..."
+    git -C "$dir" pull origin main
+    log_success "${name} 已更新"
+  else
+    log_info "Clone ${name}..."
+    # 保留已有的 .gitignore（本地建立的）
+    local tmp_gitignore=""
+    if [[ -f "${dir}/.gitignore" ]]; then
+      tmp_gitignore=$(cat "${dir}/.gitignore")
+    fi
 
-  if [[ ! -d ".venv" ]]; then
-    "$PYTHON_CMD" -m venv .venv
-    log_success "虛擬環境建立完成"
+    git clone --branch main "$repo" "${dir}_tmp"
+    rsync -a --ignore-existing "${dir}_tmp/" "${dir}/"
+    rm -rf "${dir}_tmp"
+
+    # 恢復 .gitignore（如果 clone 沒帶）
+    if [[ -n "$tmp_gitignore" && ! -f "${dir}/.gitignore" ]]; then
+      echo "$tmp_gitignore" > "${dir}/.gitignore"
+    fi
+
+    log_success "${name} clone 完成"
+  fi
+}
+
+clone_or_pull "$CHART_DIR" "$CHART_REPO" "@aidms/chart-components"
+clone_or_pull "$APP_DIR"   "$APP_REPO"   "DashboardApp"
+
+# ── 安裝依賴 ─────────────────────────────────────────────────────────────
+
+if [[ "$INSTALL_DEPS" == true ]]; then
+  echo ""
+  log_info "安裝依賴..."
+
+  # ChartComponents
+  if [[ -f "${CHART_DIR}/package.json" ]]; then
+    log_info "  ChartComponents npm install..."
+    cd "$CHART_DIR" && npm install --silent && cd "$WORKSPACE_DIR"
+    log_success "  ChartComponents 完成"
   fi
 
-  # 啟動虛擬環境
-  if [[ -f ".venv/bin/activate" ]]; then
-    # Mac / Linux
-    source .venv/bin/activate
-  elif [[ -f ".venv/Scripts/activate" ]]; then
-    # Windows (Git Bash)
-    source .venv/Scripts/activate
+  # DashboardApp Frontend
+  if [[ -f "${APP_DIR}/frontend/package.json" ]]; then
+    log_info "  DashboardApp frontend npm install..."
+    cd "${APP_DIR}/frontend" && npm install --silent && cd "$WORKSPACE_DIR"
+    log_success "  Frontend 完成"
   fi
 
-  pip install -r requirements.txt -q
-  log_success "Python 依賴安裝完成"
-  cd "$WORKSPACE_DIR"
-else
-  log_warn "DashboardApp/backend/requirements.txt 不存在，跳過"
+  # DashboardApp Backend
+  if [[ -f "${APP_DIR}/backend/requirements.txt" ]]; then
+    log_info "  DashboardApp backend venv + pip install..."
+    cd "${APP_DIR}/backend"
+
+    if [[ ! -d ".venv" ]]; then
+      "$PYTHON_CMD" -m venv .venv
+    fi
+
+    # 啟動 venv（Mac/Linux + Windows Git Bash 相容）
+    if [[ -f ".venv/bin/activate" ]]; then
+      source .venv/bin/activate
+    elif [[ -f ".venv/Scripts/activate" ]]; then
+      source .venv/Scripts/activate
+    fi
+
+    pip install -r requirements.txt -q
+    deactivate 2>/dev/null || true
+    cd "$WORKSPACE_DIR"
+    log_success "  Backend 完成"
+  fi
 fi
 
-echo ""
-log_success "所有依賴安裝完成"
+# ── 開發模式 ─────────────────────────────────────────────────────────────
 
-# ── 開發模式：啟動前端 + 後端 ─────────────────────────────────────────────
 if [[ "$DEV_MODE" == true ]]; then
   echo ""
   log_info "啟動開發環境..."
 
-  if [[ ! -f "DashboardApp/frontend/package.json" ]]; then
-    log_error "DashboardApp/frontend/package.json 不存在，無法啟動"
+  if [[ ! -f "${APP_DIR}/frontend/package.json" ]]; then
+    log_error "${APP_DIR}/frontend/package.json 不存在，請先執行 bash setup.sh"
+    exit 1
+  fi
+  if [[ ! -f "${APP_DIR}/backend/main.py" ]]; then
+    log_error "${APP_DIR}/backend/main.py 不存在，請先實作後端"
     exit 1
   fi
 
-  if [[ ! -f "DashboardApp/backend/main.py" ]]; then
-    log_error "DashboardApp/backend/main.py 不存在，無法啟動"
-    exit 1
-  fi
-
-  # 後端：背景執行
-  log_info "啟動 FastAPI 後端（:8000）..."
-  cd DashboardApp/backend
-  source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null
+  # 後端背景執行
+  log_info "啟動 FastAPI（:8000）..."
+  cd "${APP_DIR}/backend"
+  [[ -f ".venv/bin/activate" ]] && source .venv/bin/activate
+  [[ -f ".venv/Scripts/activate" ]] && source .venv/Scripts/activate
   uvicorn main:app --reload --port 8000 &
   BACKEND_PID=$!
   cd "$WORKSPACE_DIR"
 
-  # 前端：前景執行（Ctrl+C 一起停）
-  log_info "啟動 Vite 前端（:5173）..."
+  trap "kill $BACKEND_PID 2>/dev/null; exit 0" INT TERM
+
   echo ""
   echo "  前端：http://localhost:5173"
   echo "  後端：http://localhost:8000"
-  echo "  API Docs：http://localhost:8000/docs"
+  echo "  Docs：http://localhost:8000/docs"
   echo ""
   echo "  Ctrl+C 同時停止前後端"
   echo ""
 
-  trap "kill $BACKEND_PID 2>/dev/null; exit 0" INT TERM
-
-  cd DashboardApp/frontend
-  npm run dev
-
+  cd "${APP_DIR}/frontend" && npm run dev
   wait $BACKEND_PID
 fi
 
+# ── 完成摘要 ─────────────────────────────────────────────────────────────
 echo ""
 echo "============================================================"
 log_success "Setup 完成"
 echo ""
-echo "  啟動開發環境："
-echo "    bash setup.sh --dev"
+echo "  Repos:"
+echo "    Workspace:   https://github.com/tomas41026175/aidms-dashboard"
+echo "    ChartPkg:    https://github.com/tomas41026175/aidms-chart-components"
+echo "    DashboardApp: https://github.com/tomas41026175/aidms-dashboard-app"
 echo ""
-echo "  或分別啟動："
-echo "    cd DashboardApp/backend && uvicorn main:app --reload"
-echo "    cd DashboardApp/frontend && npm run dev"
+echo "  啟動開發環境:"
+echo "    bash setup.sh --dev"
 echo "============================================================"
 echo ""
