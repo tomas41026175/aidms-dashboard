@@ -1,7 +1,7 @@
 # Dashboard 設計方案
 
 > Task 1 — 系統監控儀表板
-> React/TypeScript + FastAPI + @mui/material + @mui/x-charts
+> React/TypeScript + Node.js (Express) + @mui/material + @mui/x-charts
 
 ---
 
@@ -9,7 +9,7 @@
 
 ```
 ✅ 使用 React/TypeScript 開發前端介面
-✅ 後端提供 CPU、記憶體、磁碟使用率（後端改用 FastAPI/Python 代替 Node.js）
+✅ 後端使用 Node.js，提供 CPU、記憶體、磁碟使用率（啟動指令：node server.js）
 ✅ 數據可視化（響應式設計）
 ✅ 頁面載入時間 < 2 秒
 ✅ 至少 3 個測試場景
@@ -169,7 +169,7 @@ interface HistoryPayload {
 ## 4. 資料流
 
 ```
-FastAPI (port 3001)
+Node.js Express server.js (port 3001)
   │
   │  SSE event "history"  ← 連線時送 150 筆歷史（頁面立即有資料）
   │  SSE event "metrics"  ← 每 2 秒推送 1 筆
@@ -291,59 +291,112 @@ export function deriveAlertLevel(
 
 ## 6. 視覺主題
 
-### Dark-first 原因
+### Clean Dark 風格
 
-AIDMS 目標使用者（AI/製造業工程師）的工具鏈（Grafana、NVIDIA NGC、VS Code）都是深色預設。讓儀表板視覺語言與他們的工作環境一致。
+參考：Vercel Dashboard、Linear、Raycast。
+核心原則：**大量留白、細節克制、層次靠亮度差異而非邊框**。
+
+```
+色階層次（由深到淺）：
+Canvas  #09090b  ← 最底層背景（zinc-950）
+Surface #111113  ← 卡片底色（略亮）
+Overlay #1c1c1f  ← hover / elevated 狀態
+Border  rgba(255,255,255,0.07)  ← 極細、幾乎隱形的分隔
+
+Accent: #a78bfa（violet-400）— 柔和紫，現代感強、不刺眼
+Normal state: #34d399（emerald-400）
+Warning:      #fbbf24（amber-400）
+Critical:     #f87171（red-400）
+
+Text primary:   #fafafa（zinc-50）
+Text secondary: rgba(250,250,250,0.45)
+Text muted:     rgba(250,250,250,0.28)
+```
 
 ```typescript
 // theme.ts
-// 色系參考：NVIDIA NGC 視覺語言（工程師工具鏈慣用的深色系）
-// Canvas #111217 → Primary #181b1f → Cards #22252b → Elevated #2a2a2f
-// Accent: NVIDIA Green #76b900（數值正常/良好狀態）
-// Text: rgb(204,204,220) → rgba(204,204,220,0.65)（主/次）
+// Clean Dark — Vercel/Linear 風格
+// 層次靠亮度差異（zinc 色階），不靠重邊框
 export function createAppTheme(mode: 'light' | 'dark') {
   return createTheme({
     palette: {
       mode,
       ...(mode === 'dark' ? {
-        primary: { main: '#76b900' },        // NVIDIA Green — 主 accent
-        background: { default: '#111217', paper: '#22252b' },
-        divider: 'rgba(204, 204, 220, 0.12)',
+        primary: { main: '#a78bfa' },          // violet-400 — accent
+        background: {
+          default: '#09090b',                  // zinc-950 canvas
+          paper:   '#111113',                  // zinc-900 surface
+        },
+        divider: 'rgba(255, 255, 255, 0.07)',  // 極細分隔線
         text: {
-          primary: 'rgb(204, 204, 220)',
-          secondary: 'rgba(204, 204, 220, 0.65)',
+          primary:   '#fafafa',                // zinc-50
+          secondary: 'rgba(250, 250, 250, 0.45)',
         },
       } : {
-        primary: { main: '#5a8f00' },        // NVIDIA Green 亮色變體
-        background: { default: '#f1f5f9', paper: '#ffffff' },
-        text: { primary: '#0f172a', secondary: '#475569' },
+        primary: { main: '#7c3aed' },          // violet-700 亮色變體
+        background: { default: '#f4f4f5', paper: '#ffffff' },
+        divider: 'rgba(0, 0, 0, 0.08)',
+        text: { primary: '#09090b', secondary: '#71717a' },
       }),
     },
+    shape: {
+      borderRadius: 12,                        // 圓角統一 12px，現代感
+    },
     typography: {
-      // Inter 對應 NVIDIA Sans；Roboto Mono 讓數字更新時不跳動
-      fontFamily: '"Inter", "Roboto Mono", system-ui, sans-serif',
+      fontFamily: '"Inter", system-ui, sans-serif',
+      // 數字顯示用 tabular nums 避免跳動（在元件層 sx 設定）
     },
     components: {
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundImage: 'none', // 移除 MUI dark mode elevation overlay
-            border: '1px solid rgba(204, 204, 220, 0.12)',
+            backgroundImage: 'none',
+            backgroundColor: '#111113',
+            border: '1px solid rgba(255, 255, 255, 0.07)',
+            boxShadow: 'none',                 // 不用陰影，靠色差製造層次
+            borderRadius: 12,
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: '#181b1f',
-            borderBottom: '1px solid rgba(204, 204, 220, 0.12)',
+            backgroundColor: 'rgba(9, 9, 11, 0.85)', // 半透明 + backdrop blur
+            backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.07)',
+            boxShadow: 'none',
           },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: { borderRadius: 6 },
         },
       },
     },
   });
 }
 ```
+
+### 數字顯示（tabular nums）
+
+圖表數值、百分比用 `fontVariantNumeric: 'tabular-nums'` 避免數字更新時版面跳動：
+
+```typescript
+<Typography sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+  {value.toFixed(1)}%
+</Typography>
+```
+
+### 告警色系調整
+
+Clean Dark 下告警用**飽和度中等的柔和色**，不用過飽和螢光色：
+
+| 狀態 | 顏色 | 說明 |
+|------|------|------|
+| Normal | `#34d399` emerald-400 | 清爽綠，讀得出「良好」 |
+| Warning | `#fbbf24` amber-400 | 暖黃，不刺眼 |
+| Critical | `#f87171` red-400 | 柔紅，搭配 pulse glow |
 
 ```typescript
 // App.tsx — 預設 dark（只有明確設定 light 的系統才用 light）

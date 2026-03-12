@@ -10,13 +10,13 @@
 ```
 Layer 1 (Workspace)     → 本目錄：設計、計畫、面試資料
 Layer 2a (ChartComponents) → @aidms/chart-components npm 套件
-Layer 2b (DashboardApp)    → React + FastAPI 全端監控儀表板
+Layer 2b (DashboardApp)    → React + Node.js (Express) 全端監控儀表板
 ```
 
 ## 開發順序
 
 ```
-Task 2（ChartComponents）→ Task 1（Dashboard Frontend）→ Task 1（FastAPI Backend）
+Task 2（ChartComponents）→ Task 1（Dashboard Frontend）→ Task 1（Node.js Backend）
 ```
 
 理由：Dashboard 依賴 ChartComponents，先做套件再接入。
@@ -50,7 +50,7 @@ Task 2（ChartComponents）→ Task 1（Dashboard Frontend）→ Task 1（FastAP
 ### 技術硬性要求
 
 - 前端：`@mui/material` + `@mui/x-charts`（不可替換）
-- 後端：FastAPI + psutil + sse-starlette
+- 後端：Node.js + Express + systeminformation（PDF 要求：node server.js）
 - 套件打包：tsup（ESM + CJS）
 
 ### 告警閾值（業界標準）
@@ -63,7 +63,7 @@ Task 2（ChartComponents）→ Task 1（Dashboard Frontend）→ Task 1（FastAP
 
 ### SSE 關鍵設計
 
-- 後端 `deque(maxlen=150)` 保留 5 分鐘歷史
+- 後端 ring buffer（maxLen=150）保留 5 分鐘歷史
 - 連線時先送 `history` event（頁面立刻有資料）
 - 每 2 秒送 `metrics` event
 - 每 15 秒送 SSE comment 心跳（防 Nginx 斷線）
@@ -72,19 +72,25 @@ Task 2（ChartComponents）→ Task 1（Dashboard Frontend）→ Task 1（FastAP
 
 | 指標 | Mac | Windows | 處理 |
 |------|-----|---------|------|
-| `cpu_percent()` | ✅ | ✅ | 無差異 |
+| CPU | ✅ | ✅ | `systeminformation` 跨平台 |
 | Load Average | ✅ | ❌ | `loadAvg?: number[]`（optional）|
-| `cpu_freq()` M 系列 | ⚠️ 回傳 None | ✅ | 不使用此欄位 |
-| Python 指令 | `python3` | `python` | package.json 用 cross-env |
+| 網路速率 | ✅ | ✅ | 兩次取樣計算 delta |
 
-### 視覺主題（NVIDIA NGC 風格）
+### 視覺主題（Clean Dark — Vercel/Linear 風格）
 
 ```typescript
-// 色系對照
-background.default: '#111217'   // Canvas
-background.paper:   '#22252b'   // Cards
-primary.main:       '#76b900'   // NVIDIA Green（accent）
-text.primary:       'rgb(204, 204, 220)'
-text.secondary:     'rgba(204, 204, 220, 0.65)'
-divider:            'rgba(204, 204, 220, 0.12)'
+// 色系對照（Dark Mode）
+background.default: '#09090b'                 // zinc-950 Canvas
+background.paper:   '#111113'                 // zinc-900 Cards
+primary.main:       '#a78bfa'                 // violet-400 accent
+text.primary:       '#fafafa'                 // zinc-50
+text.secondary:     'rgba(250, 250, 250, 0.45)'
+divider:            'rgba(255, 255, 255, 0.07)' // 極細分隔線
+borderRadius:       12                        // 統一圓角
+AppBar:             backdrop-blur 半透明
+
+// 告警色
+normal:   '#34d399'  // emerald-400
+warning:  '#fbbf24'  // amber-400
+critical: '#f87171'  // red-400 + pulse glow
 ```
