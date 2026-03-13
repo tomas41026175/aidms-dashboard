@@ -259,7 +259,7 @@
 
 <div id="progress-bar"></div>
 <div id="counter"></div>
-<div id="nav-hint">← → 換頁　Esc 縮略圖</div>
+<div id="nav-hint">← → 換頁　Space 下一頁</div>
 
 <div id="deck">
 
@@ -295,7 +295,7 @@
     </div>
     <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
       <div style="font-size:28px; font-weight:700; color:var(--amber);">&lt;510ms</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:2px;">首屏載入時間</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">FCP（圖表有資料 &lt;200ms）</div>
     </div>
     <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
       <div style="font-size:28px; font-weight:700; color:var(--blue);">3</div>
@@ -871,7 +871,7 @@ app.<span class="fn">get</span>(<span class="str">'/api/metrics'</span>, (req, r
 <!-- ══════════════════════════════════════
      14 測試 + 結語
 ══════════════════════════════════════ -->
-<div class="slide" id="s13">
+<div class="slide" id="s14">
   <div class="slide-label">Testing &amp; Summary</div>
   <h2>測試策略 + 總結</h2>
   <div class="two-col" style="gap:24px;">
@@ -883,7 +883,9 @@ app.<span class="fn">get</span>(<span class="str">'/api/metrics'</span>, (req, r
         <tr><td>format（純函式）</td><td style="text-align:right; color:var(--green);">10</td></tr>
         <tr><td>use-system-metrics hook</td><td style="text-align:right; color:var(--blue);">18</td></tr>
         <tr><td>metric-gauge 元件</td><td style="text-align:right; color:var(--blue);">14</td></tr>
-        <tr><td>scenarios（場景）</td><td style="text-align:right; color:var(--amber);">11</td></tr>
+        <tr><td>normal-rendering 場景</td><td style="text-align:right; color:var(--amber);">4</td></tr>
+        <tr><td>sse-reconnect 場景</td><td style="text-align:right; color:var(--amber);">4</td></tr>
+        <tr><td>error-handling 場景</td><td style="text-align:right; color:var(--amber);">3</td></tr>
         <tr><td>dashboard-layout RWD</td><td style="text-align:right; color:var(--amber);">16</td></tr>
       </table>
       <div class="hl-box green" style="margin-top:10px; font-size:12px;">
@@ -920,9 +922,11 @@ const total = slides.length;
 let cur = 0;
 
 function go(n) {
-  slides[cur].classList.remove('active');
-  slides[cur].classList.add('prev');
-  setTimeout(() => slides[cur < n ? cur : (cur = n)].classList.remove('prev'), 350);
+  if (cur === n) return;
+  const prevIdx = cur;
+  slides[prevIdx].classList.remove('active');
+  slides[prevIdx].classList.add('prev');
+  setTimeout(() => slides[prevIdx].classList.remove('prev'), 350);
   cur = n;
   slides[cur].classList.add('active');
   document.getElementById('counter').textContent = `${cur + 1} / ${total}`;
