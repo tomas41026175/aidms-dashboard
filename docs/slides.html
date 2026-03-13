@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIDMS Dashboard — 技術面試簡報</title>
+<style>
+  :root {
+    --bg:       #09090b;
+    --surface:  #111113;
+    --overlay:  #1c1c1f;
+    --border:   rgba(255,255,255,0.07);
+    --accent:   #a78bfa;
+    --accent2:  #7c3aed;
+    --text:     #fafafa;
+    --muted:    rgba(250,250,250,0.45);
+    --green:    #34d399;
+    --amber:    #fbbf24;
+    --red:      #f87171;
+    --blue:     #60a5fa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ── Slide container ── */
+  #deck {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 72px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+    transform: translateX(40px);
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0);
+  }
+  .slide.prev {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+
+  /* ── Typography ── */
+  .slide-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 52px; font-weight: 700; line-height: 1.1; }
+  h2 { font-size: 36px; font-weight: 700; line-height: 1.15; margin-bottom: 28px; }
+  h3 { font-size: 20px; font-weight: 600; color: var(--accent); margin-bottom: 10px; }
+  p  { font-size: 17px; line-height: 1.7; color: var(--muted); }
+  .lead { font-size: 22px; line-height: 1.6; color: var(--text); }
+
+  /* ── Cards / Boxes ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .card-grid {
+    display: grid;
+    gap: 14px;
+    flex: 1;
+  }
+  .card-grid.col2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--overlay);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    overflow-x: auto;
+    color: #e2e2e8;
+    flex-shrink: 0;
+  }
+  .kw  { color: #c084fc; }
+  .fn  { color: #60a5fa; }
+  .str { color: #86efac; }
+  .cm  { color: rgba(250,250,250,0.35); font-style: italic; }
+  .num { color: #fbbf24; }
+  .ok  { color: var(--green); }
+  .err { color: var(--red); }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .badge-green  { background: rgba(52,211,153,.15); color: var(--green); border: 1px solid rgba(52,211,153,.3); }
+  .badge-amber  { background: rgba(251,191,36,.15);  color: var(--amber);  border: 1px solid rgba(251,191,36,.3); }
+  .badge-red    { background: rgba(248,113,113,.15); color: var(--red);   border: 1px solid rgba(248,113,113,.3); }
+  .badge-violet { background: rgba(167,139,250,.15); color: var(--accent); border: 1px solid rgba(167,139,250,.3); }
+  .badge-blue   { background: rgba(96,165,250,.15);  color: var(--blue);   border: 1px solid rgba(96,165,250,.3); }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: top;
+  }
+  td:first-child { color: var(--accent); font-family: monospace; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Flow diagrams ── */
+  .flow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 2;
+    color: var(--muted);
+    background: var(--overlay);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 24px;
+  }
+  .flow .hi { color: var(--text); }
+  .flow .acc { color: var(--accent); }
+  .flow .grn { color: var(--green); }
+  .flow .ylw { color: var(--amber); }
+
+  /* ── Tag pills ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .tag {
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--overlay);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* ── Progress bar ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    transition: width .3s ease;
+    z-index: 100;
+  }
+
+  /* ── Slide counter ── */
+  #counter {
+    position: fixed;
+    bottom: 22px;
+    right: 28px;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .06em;
+  }
+
+  /* ── Nav hint ── */
+  #nav-hint {
+    position: fixed;
+    bottom: 22px;
+    left: 28px;
+    font-size: 11px;
+    color: rgba(250,250,250,0.2);
+  }
+
+  /* ── Divider line ── */
+  .divider { width: 48px; height: 3px; background: var(--accent); border-radius: 2px; margin-bottom: 20px; }
+
+  /* ── Highlight box ── */
+  .hl-box {
+    border-left: 3px solid var(--accent);
+    padding: 12px 18px;
+    background: rgba(167,139,250,.07);
+    border-radius: 0 8px 8px 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    margin-top: 10px;
+  }
+  .hl-box.green { border-color: var(--green); background: rgba(52,211,153,.07); }
+  .hl-box.amber { border-color: var(--amber); background: rgba(251,191,36,.07); }
+  .hl-box.red   { border-color: var(--red);   background: rgba(248,113,113,.07); }
+
+  /* ── Two-col layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; align-items: start; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; flex: 1; align-items: start; }
+
+  ul { list-style: none; padding: 0; }
+  ul li {
+    padding: 6px 0;
+    padding-left: 18px;
+    position: relative;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  ul li::before { content: '—'; position: absolute; left: 0; color: var(--accent); }
+  ul li strong { color: var(--text); }
+
+  .vs-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
+  .vs-label { min-width: 70px; color: var(--muted); font-size: 12px; }
+  .vs-bad  { color: var(--red);   }
+  .vs-good { color: var(--green); }
+
+  /* pulse animation for demo */
+  @keyframes pulse-demo {
+    0%,100% { box-shadow: 0 0 0 0   rgba(248,113,113,.4); }
+    50%      { box-shadow: 0 0 0 8px rgba(248,113,113,0); }
+  }
+  .pulse-demo {
+    animation: pulse-demo 2s ease-out infinite;
+    border-color: var(--red) !important;
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter"></div>
+<div id="nav-hint">← → 換頁　Space 下一頁</div>
+
+<div id="deck">
+
+<!-- ══════════════════════════════════════
+     01 封面
+══════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+    <div class="slide-label">技術面試　2026</div>
+    <h1>AIDMS<br><span style="color:var(--accent)">Dashboard</span></h1>
+    <p class="lead" style="margin-top:20px; max-width:560px;">
+      系統監控儀表板 ＋ 可重用圖表套件<br>
+      React · Node.js · SSE · @mui/x-charts · TypeScript
+    </p>
+    <div class="tags" style="margin-top:28px;">
+      <span class="tag">React 18</span>
+      <span class="tag">TypeScript strict</span>
+      <span class="tag">Node.js + Express</span>
+      <span class="tag">Server-Sent Events</span>
+      <span class="tag">@mui/x-charts v7</span>
+      <span class="tag">Vite + tsup</span>
+      <span class="tag">81 Tests</span>
+    </div>
+  </div>
+  <div style="display:flex; gap:24px; margin-top:32px;">
+    <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:var(--accent);">2</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">Tasks 完成</div>
+    </div>
+    <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:var(--green);">81</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">Tests 全通過</div>
+    </div>
+    <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:var(--amber);">&lt;510ms</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">FCP（圖表有資料 &lt;200ms）</div>
+    </div>
+    <div class="card" style="padding:14px 20px; flex:1; text-align:center;">
+      <div style="font-size:28px; font-weight:700; color:var(--blue);">3</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:2px;">RWD 斷點層</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     02 專案概覽
+══════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-label">Overview</div>
+  <h2>兩個 Task，一個 Monorepo</h2>
+  <div class="two-col" style="margin-top:8px;">
+    <div>
+      <div class="card" style="border-color:rgba(167,139,250,.3); height:100%;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <span class="badge badge-violet">Task 2 先做</span>
+        </div>
+        <h3>@aidms/chart-components</h3>
+        <p style="font-size:14px; margin-bottom:14px;">可重用 npm 圖表套件</p>
+        <ul>
+          <li><strong>LineChart</strong> — 折線圖（SSE 趨勢）</li>
+          <li><strong>BarChart</strong> — 柱狀圖（Per-Core / Disk）</li>
+          <li><strong>GaugeChart</strong> — 儀表圖（CPU / Memory）</li>
+          <li><strong>三層架構</strong>：Rendering → Transform → Validation</li>
+          <li><strong>tsup 打包</strong>：ESM + CJS + .d.ts</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-color:rgba(96,165,250,.3); height:100%;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+          <span class="badge badge-blue">Task 1 接入</span>
+        </div>
+        <h3>DashboardApp</h3>
+        <p style="font-size:14px; margin-bottom:14px;">系統監控儀表板（全端）</p>
+        <ul>
+          <li><strong>前端</strong>：React + TypeScript + MUI</li>
+          <li><strong>後端</strong>：Node.js + Express + SSE</li>
+          <li><strong>資料採集</strong>：systeminformation</li>
+          <li><strong>告警系統</strong>：連續 3 點觸發，防 storm</li>
+          <li><strong>RWD</strong>：手機 / 平板 / 桌面三層</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="hl-box" style="margin-top:20px;">
+    設計動機：先做套件再接入 Dashboard，強迫解耦——套件層不知道 Dashboard 存在，Dashboard 像一個普通消費者使用 npm 套件
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     03 整體架構
+══════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-label">Architecture</div>
+  <h2>資料流全景</h2>
+  <div class="flow" style="font-size:12.5px; line-height:1.9;">
+<span class="grn">[systeminformation]</span>  ← 跨平台採集 CPU / Memory / Disk / Network
+        ↓ <span class="ylw">每 2 秒</span>
+<span class="hi">[Node.js server.js]</span>
+  ├─ ring buffer <span class="acc">(maxLen=150)</span>    ← 5 分鐘歷史 O(n) push
+  ├─ SSE <span class="grn">"history"</span> event      ← 連線時一次送 150 筆，<span class="ylw">頁面立即有資料</span>
+  └─ SSE <span class="grn">"metrics"</span> event      ← 每 2 秒推 1 筆
+        ↓
+<span class="hi">[useSystemMetrics Hook]</span>   ← 唯一 SSE 連線
+  ├─ latest / history / status
+        ↓
+<span class="hi">[Dashboard.tsx]</span>  <span class="acc">useMemo</span> 計算 derived data
+  ├─ cpuAlertLevel / memAlertLevel / diskAlertLevel
+        ↓
+<span class="hi">[Pure Components]</span>  props-in / JSX-out
+  ├─ MetricGauge × 3  ──→ <span class="acc">GaugeChart</span>
+  ├─ TrendPanel × 2   ──→ <span class="acc">LineChart</span>
+  └─ CpuCorePanel / DiskPanel  ──→ <span class="acc">BarChart</span>
+  </div>
+  <div class="hl-box" style="margin-top:16px;">
+    只有 3 個元件有 State（App · ErrorBoundary · Dashboard），其餘全為 Pure 元件 — 出問題只看 Dashboard 的 state 即可定位
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     04 亮點① SSE history event
+══════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-label">亮點 01 / 06</div>
+  <h2>SSE + history event<br><span style="font-size:22px; color:var(--muted); font-weight:400;">解決首屏空白問題</span></h2>
+  <div class="two-col">
+    <div>
+      <div class="card" style="border-color:rgba(248,113,113,.25);">
+        <div style="font-size:12px; color:var(--red); font-weight:600; margin-bottom:10px;">❌ 沒有 history event</div>
+        <p style="font-size:14px;">SSE 每 2 秒才送一次資料。用戶開啟頁面時，需等待第一個 tick，看到 <strong style="color:var(--red)">2 秒空殼</strong>。</p>
+      </div>
+      <div class="card" style="border-color:rgba(52,211,153,.25); margin-top:12px;">
+        <div style="font-size:12px; color:var(--green); font-weight:600; margin-bottom:10px;">✅ 加入 history event</div>
+        <p style="font-size:14px;">後端維護 ring buffer（maxLen=150），連線時<strong> 立即</strong>送全部歷史，頁面 mount 後 <strong style="color:var(--green)">&lt;200ms</strong> 就有完整圖形。</p>
+      </div>
+    </div>
+    <div>
+      <pre><span class="cm">// server.js — 連線處理</span>
+res.on(<span class="str">'close'</span>, cleanup)
+
+<span class="cm">// 1. 立即送歷史</span>
+<span class="fn">sendEvent</span>(res, <span class="str">'history'</span>, {
+  metrics: metricsBuffer
+})
+
+<span class="cm">// 2. 每 2 秒推新資料</span>
+<span class="kw">const</span> timer = setInterval(<span class="kw">async</span> () => {
+  <span class="kw">const</span> m = <span class="kw">await</span> <span class="fn">collectMetrics</span>()
+  <span class="fn">sendEvent</span>(res, <span class="str">'metrics'</span>, m)
+}, <span class="num">2000</span>)
+
+<span class="cm">// 3. 每 15s 心跳（防 Nginx timeout）</span>
+res.write(<span class="str">': keepalive\n\n'</span>)</pre>
+      <div class="hl-box green" style="margin-top:10px; font-size:13px;">
+        首屏時間：~510ms 遠低於 PDF 要求的 2 秒
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     05 亮點② Transform Layer
+══════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-label">亮點 02 / 06</div>
+  <h2>Transform Layer<br><span style="font-size:22px; color:var(--muted); font-weight:400;">隔離 MUI API 變化風險</span></h2>
+  <div class="two-col">
+    <div>
+      <pre style="font-size:12px;"><span class="cm">// 消費者寫這個（直覺）</span>
+&lt;<span class="fn">LineChart</span>
+  labels={timestamps}
+  datasets={[{
+    label: <span class="str">'CPU'</span>,
+    data: cpuData
+  }]}
+  curve=<span class="str">"smooth"</span>
+  yRange={[<span class="num">0</span>, <span class="num">100</span>]}
+/&gt;
+
+<span class="cm">// Transform Layer 自動翻譯成 MUI</span>
+{
+  series: [{ curve: <span class="str">'monotoneX'</span>, ... }],
+  xAxis: [{ scaleType: <span class="str">'time'</span> }],
+  yAxis: [{ min: <span class="num">0</span>, max: <span class="num">100</span> }],
+}</pre>
+    </div>
+    <div>
+      <h3 style="margin-bottom:12px;">API 對照</h3>
+      <table>
+        <tr><th>我們的 API</th><th>MUI 原生</th></tr>
+        <tr><td>labels</td><td style="color:var(--muted); font-size:13px;">xAxis[0].data</td></tr>
+        <tr><td>datasets</td><td style="color:var(--muted); font-size:13px;">series[]</td></tr>
+        <tr><td>curve: 'smooth'</td><td style="color:var(--muted); font-size:13px;">curve: 'monotoneX'</td></tr>
+        <tr><td>yRange</td><td style="color:var(--muted); font-size:13px;">yAxis[0].min/max</td></tr>
+        <tr><td>animate</td><td style="color:var(--muted); font-size:13px;">skipAnimation（反向）</td></tr>
+        <tr><td>color: fn</td><td style="color:var(--muted); font-size:13px;">sx[gaugeClasses.valueArc]</td></tr>
+      </table>
+      <div class="hl-box" style="margin-top:14px; font-size:13px;">
+        Transform 是<strong>純函式</strong>——不需要 DOM，100% 可單元測試。升級 MUI v8 只改 transform，消費者側零改動
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     06 亮點③ 連續 3 點告警
+══════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-label">亮點 03 / 06</div>
+  <h2>連續 3 點告警<br><span style="font-size:22px; color:var(--muted); font-weight:400;">防 Alert Storm · Cry Wolf Effect</span></h2>
+  <div class="two-col">
+    <div>
+      <pre style="font-size:12px;"><span class="kw">const</span> CONSECUTIVE = <span class="num">3</span>  <span class="cm">// = 6 秒</span>
+
+<span class="kw">export function</span> <span class="fn">deriveAlertLevel</span>(
+  history: SystemMetrics[],
+  extractor: (m) => number,
+  thresholds,
+) {
+  <span class="kw">const</span> lastN = history.<span class="fn">slice</span>(-CONSECUTIVE)
+  <span class="kw">const</span> levels = lastN.<span class="fn">map</span>(m =>
+    <span class="fn">classifyValue</span>(extractor(m), thresholds)
+  )
+  <span class="kw">if</span> (levels.<span class="fn">every</span>(l => l === <span class="str">'critical'</span>))
+    <span class="kw">return</span> <span class="err">'critical'</span>
+  <span class="kw">if</span> (levels.<span class="fn">every</span>(l => l !== <span class="str">'normal'</span>))
+    <span class="kw">return</span> <span class="ylw">'warning'</span>
+  <span class="kw">return</span> <span class="ok">'normal'</span>
+}</pre>
+    </div>
+    <div>
+      <h3>為什麼是 3 點？</h3>
+      <ul style="margin-bottom:16px;">
+        <li><strong>1 點</strong> = Alert storm，cron/GC 每次都觸發，用戶無視所有告警</li>
+        <li><strong>3 點 = 6 秒</strong> — 過濾短暫 spike，不延遲真告警</li>
+        <li><strong>5~10 點</strong> = 10~20 秒，告警延遲太久，錯過處理窗口</li>
+      </ul>
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <span class="badge badge-green">CPU: W&gt;70% C&gt;85%</span>
+        <span class="badge badge-amber">MEM: W&gt;75% C&gt;90%</span>
+        <span class="badge badge-red">DISK: W&gt;80% C&gt;90%</span>
+      </div>
+      <div class="hl-box amber" style="font-size:13px;">
+        業界標準設定（參考 Grafana 預設 evaluation interval）— 告警是 domain knowledge，不是任意選的數字
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     07 亮點④⑤ RWD + Pulse Glow
+══════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-label">亮點 04–05 / 06</div>
+  <h2>RWD 條件渲染 + Pulse Glow</h2>
+  <div class="two-col" style="gap:20px;">
+    <div>
+      <h3>為什麼不用 CSS hidden？</h3>
+      <pre style="font-size:12px;"><span class="cm">// ✅ 條件渲染（不 mount = 零資源消耗）</span>
+{isTabletUp  &amp;&amp; &lt;<span class="fn">TrendCharts</span> /&gt;}
+{isDesktopUp &amp;&amp; &lt;<span class="fn">DetailPanels</span> /&gt;}
+
+<span class="cm">// ❌ display:none 的問題：</span>
+<span class="cm">// MUI x-charts SVG 用 ResizeObserver</span>
+<span class="cm">// 隱藏時 clientWidth=0</span>
+<span class="cm">// → SVG 以 width=0 渲染 → 空白 bug</span></pre>
+      <div style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="width:80px; font-size:12px; color:var(--muted);">&lt;600px</span>
+          <span class="badge badge-violet">MetricCards</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="width:80px; font-size:12px; color:var(--muted);">≥600px</span>
+          <span class="badge badge-violet">MetricCards</span>
+          <span class="badge badge-blue">+ TrendCharts</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="width:80px; font-size:12px; color:var(--muted);">≥900px</span>
+          <span class="badge badge-violet">MetricCards</span>
+          <span class="badge badge-blue">TrendCharts</span>
+          <span class="badge badge-green">+ DetailPanels</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>Critical 告警 — Pulse Glow</h3>
+      <div class="card pulse-demo" style="margin-bottom:14px; text-align:center;">
+        <div style="font-size:11px; color:var(--red); font-weight:600; letter-spacing:.08em; margin-bottom:6px;">CRITICAL</div>
+        <div style="font-size:32px; font-weight:700; color:var(--red); font-variant-numeric:tabular-nums;">87.3%</div>
+        <div style="font-size:11px; color:var(--muted);">CPU</div>
+      </div>
+      <pre style="font-size:11.5px;"><span class="cm">// 設計決策：靜態紅框 → banner blindness</span>
+<span class="cm">// Pulse = 柔和脈衝，持續提醒不干擾</span>
+animation: alertLevel === <span class="str">'critical'</span>
+  ? <span class="str">`</span><span class="fn">${pulseAnimation}</span><span class="str"> 2s ease-out infinite`</span>
+  : <span class="str">'none'</span>,
+<span class="cm">// @media prefers-reduced-motion</span>
+<span class="cm">// 不能寫在 keyframes 內（CSS 規格限制！）</span>
+<span class="str">'@media (prefers-reduced-motion: reduce)'</span>:
+  { animation: <span class="str">'none'</span> }</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     08 亮點⑥ Vite dedupe
+══════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-label">亮點 06 / 06</div>
+  <h2>Vite resolve.dedupe<br><span style="font-size:22px; color:var(--muted); font-weight:400;">Monorepo 雙實例問題</span></h2>
+  <div class="two-col">
+    <div>
+      <h3>問題根因</h3>
+      <div class="flow" style="font-size:12px; line-height:1.8; margin-bottom:14px;">
+<span class="hi">DashboardApp</span>
+  └─ node_modules/@mui/x-charts  <span class="grn">← ThemeProvider ✓</span>
+
+<span class="hi">ChartComponents</span> (file: 連結)
+  └─ node_modules/@mui/x-charts  <span class="err">← 獨立實例！</span>
+     <span class="err">不在 ThemeProvider context 中</span>
+     <span class="err">→ 預設 light theme</span>
+     <span class="err">→ 黑色文字 + 深色背景 = 不可見</span>
+      </div>
+      <div class="hl-box red" style="font-size:13px;">
+        視覺症狀：Gauge 圖表空白、LineChart 圖例文字消失、軸標籤不可見
+      </div>
+    </div>
+    <div>
+      <h3>解法</h3>
+      <pre style="font-size:12px;"><span class="cm">// vite.config.ts</span>
+<span class="kw">export default</span> <span class="fn">defineConfig</span>({
+  resolve: {
+    dedupe: [
+      <span class="str">'react'</span>,
+      <span class="str">'react-dom'</span>,
+      <span class="str">'@mui/material'</span>,
+      <span class="str">'@mui/x-charts'</span>,   <span class="cm">// 關鍵</span>
+      <span class="str">'@emotion/react'</span>,
+      <span class="str">'@emotion/styled'</span>,
+    ],
+  },
+})</pre>
+      <div class="hl-box green" style="margin-top:12px; font-size:13px;">
+        強制所有模組（含 file: 連結的套件）共用同一份 MUI 實例，ThemeProvider context 正確傳遞
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     09 代碼難點
+══════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-label">Code Challenges</div>
+  <h2>代碼難點</h2>
+  <div class="two-col">
+    <div>
+      <h3>① Runtime 型別守衛</h3>
+      <pre style="font-size:11.5px;"><span class="cm">// SSE JSON.parse 後是 unknown</span>
+<span class="cm">// TypeScript 只在編譯期保護你</span>
+<span class="kw">function</span> <span class="fn">isValidMetrics</span>(
+  data: <span class="kw">unknown</span>
+): data <span class="kw">is</span> SystemMetrics {
+  <span class="kw">if</span> (<span class="kw">typeof</span> data !== <span class="str">'object'</span>) <span class="kw">return false</span>
+  <span class="kw">const</span> d = data <span class="kw">as</span> Record&lt;<span class="kw">string</span>, <span class="kw">unknown</span>&gt;
+  <span class="kw">if</span> (<span class="kw">typeof</span> d.cpu?.usage !== <span class="str">'number'</span>)
+    <span class="kw">return false</span>
+  <span class="kw">if</span> (!Array.<span class="fn">isArray</span>(d.disk)) <span class="kw">return false</span>
+  <span class="kw">return true</span>  <span class="cm">// TypeScript narrowing ✓</span>
+}</pre>
+      <div style="font-size:12px; color:var(--muted); margin-top:6px;">
+        解法：type predicate <code style="color:var(--accent);">data is SystemMetrics</code> — 不用 any，讓 TS 理解 narrowing
+      </div>
+    </div>
+    <div>
+      <h3>② Gauge width = 0 Bug</h3>
+      <pre style="font-size:11.5px;"><span class="cm">// ❌ flex 容器讓 Gauge 坍塌</span>
+&lt;Box sx={{ display: <span class="str">'flex'</span> }}&gt;
+  &lt;<span class="fn">GaugeChart</span> /&gt;  <span class="cm">// clientWidth=0!</span>
+&lt;/Box&gt;
+
+<span class="cm">// ✅ block 自然填滿寬度</span>
+&lt;Box sx={{ my: <span class="num">1</span> }}&gt;
+  &lt;<span class="fn">GaugeChart</span> /&gt;
+&lt;/Box&gt;</pre>
+      <h3 style="margin-top:14px;">③ Memory available vs free</h3>
+      <pre style="font-size:11.5px;"><span class="cm">// ❌ os.freemem() 低估可用量</span>
+<span class="cm">// Linux cache 不算在 free 裡</span>
+<span class="cm">// ✅ available = free + cache_reclaimable</span>
+usage = (total - <span class="ok">available</span>) / total * <span class="num">100</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     10 元件 API 設計
+══════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="slide-label">ChartComponents Design</div>
+  <h2>三層漸進式 API<br><span style="font-size:22px; color:var(--muted); font-weight:400;">Progressive Disclosure</span></h2>
+  <div class="three-col" style="gap:14px;">
+    <div class="card" style="border-color:rgba(52,211,153,.3);">
+      <div class="badge badge-green" style="margin-bottom:12px;">Level 1 — 80% 場景</div>
+      <pre style="font-size:11.5px; background:transparent; border:none; padding:0;">&lt;<span class="fn">LineChart</span>
+  labels={timestamps}
+  datasets={datasets}
+/&gt;
+
+<span class="cm">// 零配置，直接可用</span></pre>
+    </div>
+    <div class="card" style="border-color:rgba(251,191,36,.3);">
+      <div class="badge badge-amber" style="margin-bottom:12px;">Level 2 — 進階配置</div>
+      <pre style="font-size:11.5px; background:transparent; border:none; padding:0;">&lt;<span class="fn">LineChart</span>
+  labels={timestamps}
+  datasets={datasets}
+  yRange={[<span class="num">0</span>, <span class="num">100</span>]}
+  curve=<span class="str">"smooth"</span>
+  animate={<span class="kw">false</span>}
+/&gt;</pre>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,.3);">
+      <div class="badge badge-red" style="margin-bottom:12px;">Level 3 — Escape Hatch</div>
+      <pre style="font-size:11.5px; background:transparent; border:none; padding:0;">&lt;<span class="fn">LineChart</span>
+  labels={timestamps}
+  datasets={datasets}
+  slotProps={{
+    xAxis: { fontSize: <span class="num">10</span> }
+  }}
+/&gt;</pre>
+    </div>
+  </div>
+  <div class="hl-box" style="margin-top:16px;">
+    <strong>設計哲學</strong>：讓常見的事情簡單，讓不常見的事情可能。<code style="color:var(--accent);">slotProps</code> 是安全閥——保留進入 MUI 原生能力的入口，不讓消費者被鎖死
+  </div>
+  <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+    <div class="hl-box green" style="flex:1; font-size:13px;">
+      <strong>色彩函式</strong>：<code>color={(v) => v &gt; 85 ? '#f87171' : '#34d399'}</code><br>套件不預設告警語義，業務邏輯在消費者側
+    </div>
+    <div class="hl-box amber" style="flex:1; font-size:13px;">
+      <strong>null 是合法缺值</strong>：<code>data: (number | null)[]</code><br>SSE 剛連線時無資料 → 折線斷點，而非崩潰
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     11 效能優化
+══════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-label">Performance</div>
+  <h2>大資料三層優化策略</h2>
+  <div class="card-grid col3" style="margin-top:4px; margin-bottom:16px;">
+    <div class="card" style="border-color:rgba(52,211,153,.3); text-align:center;">
+      <div style="font-size:22px; color:var(--green); font-weight:700; margin-bottom:6px;">&lt; 300 點</div>
+      <div style="font-size:13px; color:var(--muted);">SVG 直接渲染</div>
+      <div style="font-size:12px; color:var(--green); margin-top:8px;">~8ms / render</div>
+    </div>
+    <div class="card" style="border-color:rgba(251,191,36,.3); text-align:center;">
+      <div style="font-size:22px; color:var(--amber); font-weight:700; margin-bottom:6px;">300–10k</div>
+      <div style="font-size:13px; color:var(--muted);">LTTB 降採樣 → SVG</div>
+      <div style="font-size:12px; color:var(--amber); margin-top:8px;">&lt;3ms (1k pts)</div>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,.3); text-align:center;">
+      <div style="font-size:22px; color:var(--red); font-weight:700; margin-bottom:6px;">&gt; 10k</div>
+      <div style="font-size:13px; color:var(--muted);">Canvas + Web Worker</div>
+      <div style="font-size:12px; color:var(--red); margin-top:8px;">~12ms (10k pts)</div>
+    </div>
+  </div>
+  <div class="two-col" style="gap:20px;">
+    <div>
+      <h3>LTTB 演算法</h3>
+      <div class="flow" style="font-size:12px; line-height:1.7;">
+<span class="cm">傳統等距取樣：</span>
+  原始: ─────<span class="err">∧</span>──────────/──
+  等距: ──   ─   ─   ─   ─  ← spike <span class="err">被取到空白處</span>
+
+<span class="cm">LTTB：每 bucket 取三角形面積最大的點</span>
+  A = 前一個選中點
+  B = 候選點
+  C = 下一個 bucket 平均（代理未來趨勢）
+  選 <span class="grn">max(area(A,B,C))</span> ← 面積大 = 視覺重要
+      </div>
+    </div>
+    <div>
+      <h3>MVP 已實作優化</h3>
+      <ul>
+        <li><strong>&gt;30 點關閉 mark</strong>：減少 SVG DOM 節點</li>
+        <li><strong>animate={false}</strong>：SSE 2s 更新時不重播動畫</li>
+        <li><strong>useMemo datasets</strong>：穩定 reference，避免不必要 re-render</li>
+        <li><strong>React.memo（TrendCharts）</strong>：同一 2s 週期內跳過中間 render</li>
+      </ul>
+      <div class="hl-box amber" style="margin-top:10px; font-size:12px;">
+        告警場景用 Min-Max 而非 LTTB — 確保 CPU spike 峰值不被抹除
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     12 擴充性
+══════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div class="slide-label">Extensibility</div>
+  <h2>擴充性設計<br><span style="font-size:22px; color:var(--muted); font-weight:400;">最小改動，預留接口</span></h2>
+  <div class="three-col" style="gap:16px; margin-top:4px;">
+    <div class="card">
+      <h3 style="font-size:15px;">新增圖表類型</h3>
+      <pre style="font-size:11px; background:transparent; border:none; padding:0; margin-top:8px;"><span class="cm">// 1. 新增元件</span>
+PieChart.<span class="fn">tsx</span>
+transforms/to-pie-props.<span class="fn">ts</span>
+
+<span class="cm">// 2. 加入 export</span>
+<span class="kw">export</span> { PieChart }
+
+<span class="cm">// 3. 消費者直接用</span>
+<span class="cm">// 核心邏輯零改動</span></pre>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;">新增監控指標（GPU）</h3>
+      <pre style="font-size:11px; background:transparent; border:none; padding:0; margin-top:8px;"><span class="kw">interface</span> SystemMetrics {
+  <span class="cm">// 現有欄位...</span>
+  gpu?: {  <span class="cm">// optional</span>
+    usage: <span class="kw">number</span>
+    vram: {
+      total: <span class="kw">number</span>
+      used: <span class="kw">number</span>
+    }
+  }
+}
+<span class="cm">// systeminformation 原生支援</span></pre>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;">告警閾值動態化</h3>
+      <pre style="font-size:11px; background:transparent; border:none; padding:0; margin-top:8px;"><span class="cm">// 現在：靜態常數</span>
+<span class="kw">const</span> CPU_THRESHOLDS = {
+  warning: <span class="num">70</span>, critical: <span class="num">85</span>
+}
+
+<span class="cm">// 擴充：env 或 /api/config</span>
+<span class="kw">const</span> CPU_THRESHOLDS = {
+  warning: <span class="fn">parseInt</span>(
+    env.WARNING ?? <span class="str">'70'</span>)
+}
+<span class="cm">// deriveAlertLevel 邏輯不變</span></pre>
+    </div>
+  </div>
+  <div class="hl-box" style="margin-top:16px;">
+    歷史回顧擴充：架構已預留 — LineChart 的 <code>maxPoints + downsampleStrategy</code> 透明支援 43,200 點的 24h 歷史，只需把 SSE hook 換成 REST API hook
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     13 紀錄查詢擴充路徑
+══════════════════════════════════════ -->
+<div class="slide" id="s13">
+  <div class="slide-label">Extensibility — Historical Query</div>
+  <h2>紀錄查詢：MVP 範圍說明<br><span style="font-size:22px; color:var(--muted); font-weight:400;">已實作 vs 擴充路徑</span></h2>
+  <div class="two-col" style="gap:20px; margin-top:8px;">
+    <div>
+      <div class="card" style="border-color:rgba(52,211,153,.3); margin-bottom:14px;">
+        <div style="font-size:12px; color:var(--green); font-weight:600; letter-spacing:.06em; margin-bottom:10px;">✅ MVP 已實作</div>
+        <ul style="margin:0;">
+          <li><strong>ring buffer</strong> maxLen=150，保留最近 5 分鐘歷史</li>
+          <li><strong>history event</strong> 連線時送全部歷史，頁面立即有趨勢圖</li>
+          <li><strong>趨勢圖</strong> CPU、記憶體、網路即時折線圖</li>
+          <li><strong>LTTB 降採樣</strong> 架構已預留，LineChart 支援 maxPoints prop</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(251,191,36,.3);">
+        <div style="font-size:12px; color:var(--amber); font-weight:600; letter-spacing:.06em; margin-bottom:10px;">⏭ MVP-CUT：紀錄持久化 + 查詢</div>
+        <ul style="margin:0;">
+          <li>重啟後資料<strong style="color:var(--amber);">歸零</strong>，無法查詢歷史區間</li>
+          <li>無時間範圍選擇器 UI</li>
+          <li>無 <code style="color:var(--accent);">GET /api/metrics?from=&to=</code></li>
+        </ul>
+        <div style="font-size:12px; color:var(--muted); margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+          即時監控 MVP 只需要最近 5 分鐘，持久化超出面試題核心範圍
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>擴充路徑（最小改動 3 步）</h3>
+      <pre style="font-size:11.5px;"><span class="cm">// Step 1: server.js 每次 push 順帶寫入</span>
+<span class="kw">const</span> db = <span class="kw">new</span> <span class="fn">Database</span>(<span class="str">'metrics.db'</span>)
+db.prepare(<span class="str">`INSERT INTO metrics
+  (ts, payload) VALUES (?, ?)`</span>)
+  .<span class="fn">run</span>(Date.now(), <span class="fn">JSON.stringify</span>(m))
+
+<span class="cm">// Step 2: 新增查詢 endpoint</span>
+app.<span class="fn">get</span>(<span class="str">'/api/metrics'</span>, (req, res) => {
+  <span class="kw">const</span> { from, to } = req.query
+  <span class="kw">const</span> rows = db.prepare(
+    <span class="str">`SELECT * FROM metrics
+     WHERE ts BETWEEN ? AND ?`</span>
+  ).<span class="fn">all</span>(from, to)
+  res.<span class="fn">json</span>(rows)
+})
+
+<span class="cm">// Step 3: 前端換 hook，圖表不動</span>
+<span class="cm">// useSystemMetrics → useHistoricalMetrics</span>
+<span class="cm">// LineChart 已支援大資料 + LTTB</span>
+<span class="cm">// 核心元件零改動</span></pre>
+      <div class="hl-box green" style="margin-top:10px; font-size:12px;">
+        <strong>架構預留的關鍵</strong>：Transform Layer 與圖表元件不感知資料來源是 SSE 或 REST，切換只改 hook 層
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     14 測試 + 結語
+══════════════════════════════════════ -->
+<div class="slide" id="s14">
+  <div class="slide-label">Testing &amp; Summary</div>
+  <h2>測試策略 + 總結</h2>
+  <div class="two-col" style="gap:24px;">
+    <div>
+      <h3>81 個測試 / 8 個檔案</h3>
+      <table style="margin-top:8px; font-size:13px;">
+        <tr><th>檔案</th><th style="text-align:right;">數量</th></tr>
+        <tr><td>alert-thresholds（純函式）</td><td style="text-align:right; color:var(--green);">12</td></tr>
+        <tr><td>format（純函式）</td><td style="text-align:right; color:var(--green);">10</td></tr>
+        <tr><td>use-system-metrics hook</td><td style="text-align:right; color:var(--blue);">18</td></tr>
+        <tr><td>metric-gauge 元件</td><td style="text-align:right; color:var(--blue);">14</td></tr>
+        <tr><td>normal-rendering 場景</td><td style="text-align:right; color:var(--amber);">4</td></tr>
+        <tr><td>sse-reconnect 場景</td><td style="text-align:right; color:var(--amber);">4</td></tr>
+        <tr><td>error-handling 場景</td><td style="text-align:right; color:var(--amber);">3</td></tr>
+        <tr><td>dashboard-layout RWD</td><td style="text-align:right; color:var(--amber);">16</td></tr>
+      </table>
+      <div class="hl-box green" style="margin-top:10px; font-size:12px;">
+        MockEventSource 模擬 SSE，vi.spyOn(matchMedia) 模擬三斷點
+      </div>
+    </div>
+    <div>
+      <h3>本次實作亮點回顧</h3>
+      <ul>
+        <li><strong>SSE history event</strong> — 首屏 &lt;200ms 有完整圖形</li>
+        <li><strong>Transform Layer</strong> — 純函式隔離 MUI API</li>
+        <li><strong>連續 3 點告警</strong> — domain-aware 防 alert storm</li>
+        <li><strong>RWD 條件渲染</strong> — 解決 ResizeObserver width=0</li>
+        <li><strong>Vite dedupe</strong> — Monorepo 雙實例問題</li>
+        <li><strong>LTTB + Canvas</strong> — 大資料三層優化預留</li>
+      </ul>
+      <div style="margin-top:16px; padding:16px 20px; background:var(--overlay); border-radius:12px; border:1px solid rgba(167,139,250,.3); text-align:center;">
+        <div style="font-size:13px; color:var(--muted); margin-bottom:6px;">可維護性指標</div>
+        <div style="display:flex; justify-content:center; gap:20px;">
+          <div><div style="font-size:22px; color:var(--accent); font-weight:700;">70%</div><div style="font-size:11px; color:var(--muted);">純函式</div></div>
+          <div><div style="font-size:22px; color:var(--green); font-weight:700;">3</div><div style="font-size:11px; color:var(--muted);">Stateful 元件</div></div>
+          <div><div style="font-size:22px; color:var(--amber); font-weight:700;">0</div><div style="font-size:11px; color:var(--muted);">any 使用</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end #deck -->
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let cur = 0;
+
+function go(n) {
+  if (cur === n) return;
+  const prevIdx = cur;
+  slides[prevIdx].classList.remove('active');
+  slides[prevIdx].classList.add('prev');
+  setTimeout(() => slides[prevIdx].classList.remove('prev'), 350);
+  cur = n;
+  slides[cur].classList.add('active');
+  document.getElementById('counter').textContent = `${cur + 1} / ${total}`;
+  document.getElementById('progress-bar').style.width = `${(cur + 1) / total * 100}%`;
+}
+
+function next() { if (cur < total - 1) go(cur + 1); }
+function prev() { if (cur > 0) go(cur - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')  { e.preventDefault(); prev(); }
+});
+
+// Touch swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.changedTouches[0].clientX; });
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
+});
+
+// Click right half = next, left half = prev
+document.getElementById('deck').addEventListener('click', e => {
+  e.clientX > window.innerWidth / 2 ? next() : prev();
+});
+
+// Init
+go(0);
+</script>
+</body>
+</html>
