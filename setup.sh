@@ -5,7 +5,7 @@
 # 三層 Git 架構設定腳本
 #   Layer 1 (Workspace):     aidms-dashboard/          ← 你現在在這裡
 #   Layer 2a (Package):      ChartComponents/          ← @aidms/chart-components
-#   Layer 2b (App):          DashboardApp/             ← React + FastAPI
+#   Layer 2b (App):          DashboardApp/             ← React + Node.js (Express)
 #
 # 使用方式:
 #   bash setup.sh              # clone/pull inner repos + 安裝依賴
@@ -118,33 +118,11 @@ if [[ "$INSTALL_DEPS" == true ]]; then
     log_success "  ChartComponents 完成"
   fi
 
-  # DashboardApp Frontend
-  if [[ -f "${APP_DIR}/frontend/package.json" ]]; then
-    log_info "  DashboardApp frontend npm install..."
-    cd "${APP_DIR}/frontend" && npm install --silent && cd "$WORKSPACE_DIR"
-    log_success "  Frontend 完成"
-  fi
-
-  # DashboardApp Backend
-  if [[ -f "${APP_DIR}/backend/requirements.txt" ]]; then
-    log_info "  DashboardApp backend venv + pip install..."
-    cd "${APP_DIR}/backend"
-
-    if [[ ! -d ".venv" ]]; then
-      "$PYTHON_CMD" -m venv .venv
-    fi
-
-    # 啟動 venv（Mac/Linux + Windows Git Bash 相容）
-    if [[ -f ".venv/bin/activate" ]]; then
-      source .venv/bin/activate
-    elif [[ -f ".venv/Scripts/activate" ]]; then
-      source .venv/Scripts/activate
-    fi
-
-    pip install -r requirements.txt -q
-    deactivate 2>/dev/null || true
-    cd "$WORKSPACE_DIR"
-    log_success "  Backend 完成"
+  # DashboardApp（單層結構：前後端共用同一 package.json，後端為 server.js）
+  if [[ -f "${APP_DIR}/package.json" ]]; then
+    log_info "  DashboardApp npm install..."
+    cd "$APP_DIR" && npm install --silent && cd "$WORKSPACE_DIR"
+    log_success "  DashboardApp 完成"
   fi
 fi
 
@@ -154,21 +132,19 @@ if [[ "$DEV_MODE" == true ]]; then
   echo ""
   log_info "啟動開發環境..."
 
-  if [[ ! -f "${APP_DIR}/frontend/package.json" ]]; then
-    log_error "${APP_DIR}/frontend/package.json 不存在，請先執行 bash setup.sh"
+  if [[ ! -f "${APP_DIR}/package.json" ]]; then
+    log_error "${APP_DIR}/package.json 不存在，請先執行 bash setup.sh"
     exit 1
   fi
-  if [[ ! -f "${APP_DIR}/backend/main.py" ]]; then
-    log_error "${APP_DIR}/backend/main.py 不存在，請先實作後端"
+  if [[ ! -f "${APP_DIR}/server.js" ]]; then
+    log_error "${APP_DIR}/server.js 不存在"
     exit 1
   fi
 
-  # 後端背景執行
-  log_info "啟動 FastAPI（:8000）..."
-  cd "${APP_DIR}/backend"
-  [[ -f ".venv/bin/activate" ]] && source .venv/bin/activate
-  [[ -f ".venv/Scripts/activate" ]] && source .venv/Scripts/activate
-  uvicorn main:app --reload --port 8000 &
+  # 後端背景執行（Node.js + Express）
+  log_info "啟動後端 server.js（:3000）..."
+  cd "$APP_DIR"
+  node server.js &
   BACKEND_PID=$!
   cd "$WORKSPACE_DIR"
 
@@ -176,13 +152,12 @@ if [[ "$DEV_MODE" == true ]]; then
 
   echo ""
   echo "  前端：http://localhost:5173"
-  echo "  後端：http://localhost:8000"
-  echo "  Docs：http://localhost:8000/docs"
+  echo "  後端：http://localhost:3000"
   echo ""
   echo "  Ctrl+C 同時停止前後端"
   echo ""
 
-  cd "${APP_DIR}/frontend" && npm run dev
+  cd "$APP_DIR" && npm run dev
   wait $BACKEND_PID
 fi
 
