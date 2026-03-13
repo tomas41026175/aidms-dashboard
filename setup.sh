@@ -113,15 +113,15 @@ if [[ "$INSTALL_DEPS" == true ]]; then
 
   # ChartComponents
   if [[ -f "${CHART_DIR}/package.json" ]]; then
-    log_info "  ChartComponents npm install..."
-    cd "$CHART_DIR" && npm install --silent && cd "$WORKSPACE_DIR"
+    log_info "  ChartComponents pnpm install..."
+    cd "$CHART_DIR" && pnpm install --silent && cd "$WORKSPACE_DIR"
     log_success "  ChartComponents 完成"
   fi
 
   # DashboardApp（單層結構：前後端共用同一 package.json，後端為 server.js）
   if [[ -f "${APP_DIR}/package.json" ]]; then
-    log_info "  DashboardApp npm install..."
-    cd "$APP_DIR" && npm install --silent && cd "$WORKSPACE_DIR"
+    log_info "  DashboardApp pnpm install..."
+    cd "$APP_DIR" && pnpm install --silent && cd "$WORKSPACE_DIR"
     log_success "  DashboardApp 完成"
   fi
 fi
@@ -157,7 +157,7 @@ if [[ "$DEV_MODE" == true ]]; then
   echo "  Ctrl+C 同時停止前後端"
   echo ""
 
-  cd "$APP_DIR" && npm run dev
+  cd "$APP_DIR" && pnpm start
   wait $BACKEND_PID
 fi
 
